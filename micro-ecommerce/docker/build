@@ -1,71 +1,50 @@
 #!/bin/bash
 set -e
 
-# This script verify docker and builds the Docker container
+# This script verifies docker and builds the Docker container
 
+# Step 1: Detect OS
 if [[ "$OSTYPE" == "darwin"* ]]; then
-
-  if hash docker 2>/dev/null; then
-    CONTAINER_RUNTIME=docker
-  else
-    
-    echo "Error! We could not find docker on your Mac!"
-    echo "Please install Docker for Mac:"
-    echo "https://docs.docker.com/docker-for-mac/install/"
-
-    exit 1
-
-  fi
-
-  if hash docker-compose 2>/dev/null; then
-    CONTAINER_COMPOSE=docker-compose
-  else
-
-    echo "Error! We could not find a docker-compose on your Mac!"
-    echo "Please install Docker for Mac:"
-    echo "https://docs.docker.com/docker-for-mac/install/"
-
-    exit 1
-
-  fi
-
+  PLATFORM="macOS"
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-
-  if hash docker 2>/dev/null; then
-    CONTAINER_RUNTIME=docker
-  else
-
-    echo "Error! We could not find a container runtime on your Linux install!"
-    echo "https://docs.docker.com/engine/install/ubuntu/"
-
-    exit 1
-
-  fi
-
-  if hash docker 2>/dev/null; then
-    CONTAINER_COMPOSE=docker-compose
-  else
-
-    echo "Error! We could not find ${CONTAINER_COMPOSE} on your Linux install!"
-    echo "https://github.com/containers/podman-compose#installation"
-
-    exit 1
-
-  fi
-
+  PLATFORM="Linux"
 else
-
-  echo "Oof! Sorry! This OS is unsupported! :("
-
+  echo "Unsupported OS: $OSTYPE"
+  exit 1
 fi
 
-if [ "${CONTAINER_RUNTIME}" = "docker" ]; then
-
-  echo "Depending on your hardware specs, the initial setup can take"
-  echo "5 to 10 minutes. Please stand by..."
-  sleep 10
-  
-  DATE=`date +%Y%m%d-%H%M%S-%3N`
-  docker/build-log 2>&1 | tee log/build-$DATE.log
-  
+# Step 2: Detect Docker runtime
+if hash docker 2>/dev/null; then
+  CONTAINER_RUNTIME=docker
+else
+  echo "Error! We could not find Docker on your $PLATFORM!"
+  echo "Please install Docker:"
+  if [[ "$PLATFORM" == "macOS" ]]; then
+    echo "https://docs.docker.com/docker-for-mac/install/"
+  else
+    echo "https://docs.docker.com/engine/install/"
+  fi
+  exit 1
 fi
+
+# Step 3: Detect Docker Compose command
+if docker compose version >/dev/null 2>&1; then
+  CONTAINER_COMPOSE="docker compose"
+elif hash docker-compose 2>/dev/null; then
+  CONTAINER_COMPOSE="docker-compose"
+else
+  echo "Neither 'docker compose' nor 'docker-compose' is available. Please install Docker Compose."
+  echo "For macOS or Linux, follow:"
+  echo "https://docs.docker.com/compose/install/"
+  exit 1
+fi
+
+# Step 4: Build Docker container
+echo "Docker and Docker Compose are detected. Proceeding with the build..."
+echo "Depending on your hardware specs, the initial setup can take 5 to 10 minutes. Please stand by..."
+sleep 2
+
+mkdir -p log
+
+DATE=$(date +%Y%m%d-%H%M%S)
+${CONTAINER_COMPOSE} build 2>&1 | tee log/build-$DATE.log

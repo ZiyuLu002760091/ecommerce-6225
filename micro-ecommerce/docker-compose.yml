@@ -15,7 +15,7 @@ services:
       - rabbitmq
     networks:
       - default
-  
+
   worker:
     build: .
     container_name: micro-ecommerce-worker
@@ -28,14 +28,14 @@ services:
       - database
     networks:
       - default
-  
+
   database:
     container_name: "ecommerce-database"
-    image: library/postgres:9.6-alpine
-    ports: 
+    image: postgres:14
+    ports:
       - "5431:5432"
-    volumes: 
-      - postgres:/var/lib/postgresql/data
+    volumes:
+      - postgres:/var/lib/postgresql@14/data
     environment:
       - POSTGRES_USER=root
       - POSTGRES_PASSWORD=root@123
@@ -43,9 +43,9 @@ services:
     restart: always
     networks:
       - default
-    
+
   rabbitmq:
-    image: 'rabbitmq:3.8-management-alpine'
+    image: "rabbitmq:3.8-management-alpine"
     container_name: ecommerce-rabbitmq
     hostname: rabbitmq
     ports:
@@ -54,18 +54,18 @@ services:
     volumes:
       - rabbitmq:/var/lib/rabbitmq/mnesia
     environment:
-      - RABBITMQ_DEFAULT_USER=admin 
+      - RABBITMQ_DEFAULT_USER=admin
       - RABBITMQ_DEFAULT_PASS=admin
     networks:
       - default
-  
+
   adminer:
     container_name: adminer-container
     image: adminer
     ports:
       - 8080:8080
     restart: always
-    networks: 
+    networks:
       - default
 
 volumes:

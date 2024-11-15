@@ -42,6 +42,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'my_admin.apps.MyAdminConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -53,7 +54,7 @@ INSTALLED_APPS = [
     'django_filters',
     'corsheaders',
     'auth_core',
-    'my_admin',
+    # 'my_admin',
     'fixtures',
     'core'
 ]
