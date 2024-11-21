@@ -1,3 +1,11 @@
+from django.http import JsonResponse
+import requests
+from datetime import datetime
+from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.reverse import reverse
+
 from rest_framework_simplejwt.views import TokenObtainPairView
 from payment_gateway.models import PaymentGateway
 from django.forms.models import model_to_dict
@@ -12,6 +20,7 @@ from rest_framework import status
 from .permissions import *
 from .serializers import *
 from .models import *
+from django.db import connections
 
 class ApiRoot(APIView):
     name = 'api-root'
@@ -138,3 +147,60 @@ class PaymentGatewayListView(ListAPIView):
     queryset = PaymentGateway.objects.get_queryset()
     serializer_class = PaymentGatewaySerializer
     permission_classes = [permissions.IsAuthenticated]
+
+# Define critical endpoints
+CRITICAL_ENDPOINTS = {
+    'auth': '/api-token',
+    'products': '/products',
+    'orders': '/orders',
+    'payment': '/payment/status'
+}
+def health_check(request):
+    """
+    Basic health check endpoint
+    """
+    health_status = {
+        "status": "ok",
+        "timestamp": datetime.now().isoformat(),
+        "services": {
+            "database": check_database(),
+            "rabbitmq": check_rabbitmq()
+        }
+    }
+    
+    # Update overall status if any service is down
+    if any(service["status"] == "error" 
+           for service in health_status["services"].values()):
+        health_status["status"] = "error"
+    
+    return JsonResponse(health_status)
+
+def check_database():
+    try:
+        cursor = connections['default'].cursor()
+        cursor.execute("SELECT 1")  # Actually test a query
+        cursor.fetchone()
+        return {"status": "ok"}
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+def check_rabbitmq():
+    try:
+        import pika
+        credentials = pika.PlainCredentials('admin', 'admin')
+        connection = pika.BlockingConnection(
+            pika.ConnectionParameters(
+                host='rabbitmq',
+                credentials=credentials
+            )
+        )
+        connection.close()
+        return {"status": "ok"}
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }

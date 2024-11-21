@@ -1,16 +1,27 @@
 import React from 'react';
 import './styles.css';
+import { useHistory } from 'react-router-dom';
 
 import usePersistedState from '../../../hooks/usePersistedState';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useCart } from '../../../providers/CartProvider';
 import { Link } from 'react-router-dom';
 
-const Step = () => {
+const Step = ({ 
+  cleanCart, 
+  setStatePersistedAddress,
+}) => {
   const [checkoutState, setStatePersistedCheckout] = usePersistedState('checkout_status', false);
   const { isAuth } = useAuth();
   const { cart } = useCart();
+  const history = useHistory();
     
+  const handleSomething = () => {
+    cleanCart();
+    history.push('/some-route');
+    setStatePersistedAddress(null);
+  };
+
   return (
     <div className="step-main">
       <div className="container">

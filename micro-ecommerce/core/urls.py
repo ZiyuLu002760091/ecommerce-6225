@@ -8,6 +8,8 @@ urlpatterns = [
 
     path('', ApiRoot.as_view(), name=ApiRoot.name),
 
+    path('health/', health_check, name='health_check'),
+
     path('address', AddressListView.as_view(), name=AddressListView.name),
     path('address/<str:pk>', AddressDetail.as_view(), name=AddressDetail.name),
 
