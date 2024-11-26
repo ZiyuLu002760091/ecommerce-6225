@@ -18,3 +18,7 @@ COPY . /usr/src/app
 
 # Install dependencies
 RUN pip install -r requirements.txt
+
+# Set permissions for entrypoint scripts
+RUN chmod +x /usr/src/app/docker/k8s-entrypoint.sh \
+    && chmod +x /usr/src/app/docker/app-entrypoint.sh

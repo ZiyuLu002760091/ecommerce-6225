@@ -1,26 +1,16 @@
 from celery import Celery, bootsteps
 from django.db import transaction
-from celery import Celery
 import kombu
 import os
 
 #------------------------------------------------------#
-#                 PRODUCER SETTINGS                    #
+#                 PRODUCER SETTINGS                     #
 #------------------------------------------------------#
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
 app = Celery('celery_app')
-
-'''
-Using a string here means the worker doesn't have to serialize
-the configuration object to child processes.
-- namespace='CELERY' means all celery-related configuration keys
-should have a `CELERY_` prefix.
-'''
 app.config_from_object('django.conf:settings', namespace='CELERY')
-
-''' Load task modules from all registered Django app configs. '''
 app.autodiscover_tasks()
 
 ''' setting publisher '''
@@ -39,26 +29,36 @@ def _publish(message, routing_key):
         )
 
 #------------------------------------------------------#
-#                 CONSUMER WORKER                      #
+#                 CONSUMER WORKER                       #
 #------------------------------------------------------#
 
-with rabbitmq_conn() as conn:
-    queue = kombu.Queue(
-        name='queue-checkout',
-        exchange='checkout',
-        routing_key='payment',
-        channel=conn,
-        durable=True
-    )
-    queue.declare()
+# Create exchange and queue after connection is established
+@app.on_after_configure.connect
+def setup_rabbitmq(sender, **kwargs):
+    with rabbitmq_conn() as conn:
+        exchange = kombu.Exchange('checkout', type='direct', durable=True)
+        exchange.declare(channel=conn)
+
+        queue = kombu.Queue(
+            name='queue-checkout',
+            exchange='checkout',
+            routing_key='payment',
+            channel=conn,
+            durable=True
+        )
+        queue.declare()
 
 class PaymentConsumer(bootsteps.ConsumerStep):
-
     def get_consumers(self, channel):
         return [
             kombu.Consumer(
                 channel,
-                queues=[queue],
+                queues=[kombu.Queue(
+                    name='queue-checkout',
+                    exchange='checkout',
+                    routing_key='payment',
+                    durable=True
+                )],
                 callbacks=[self.handle_message],
                 accept=['json']
             )
@@ -69,7 +69,6 @@ class PaymentConsumer(bootsteps.ConsumerStep):
         from core.models import Checkout
         
         try:
-
             result = proccess_payment_simulation(
                 card_hash=data['card_hash'],
                 payment_method=data['payment_method']

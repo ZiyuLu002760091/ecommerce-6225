@@ -36,7 +36,7 @@ SECRET_KEY = env('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -97,9 +97,23 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
-DATABASES = {
-    'default': env.db()
-}
+if os.environ.get('POSTGRES_HOST'):
+    # Production database settings
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('POSTGRES_DB', 'ecommercedb6225'),  # Your RDS database name
+            'USER': 'root',  # Your RDS username
+            'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),  # Will come from K8s secret
+            'HOST': 'micro-ecommerce-backend-database-dkc2khuw7vll.cnqiyioyo2lq.us-east-1.rds.amazonaws.com',  # Your RDS endpoint
+            'PORT': '5432'
+        }
+    }
+else:
+    # Local development database settings
+    DATABASES = {
+        'default': env.db()
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
@@ -167,7 +181,15 @@ MEDIA_BASE_PATH = 'uploads'
 
 CORS_ORIGIN_ALLOW_ALL = True
 
-CELERY_BROKER_URL = env('RABBITMQ_URI')
+# AWS MQ Settings
+AWS_MQ_BROKER_USERID = os.environ.get('AWS_MQ_BROKER_USERID', 'admin')
+AWS_MQ_BROKER_PASSWORD = os.environ.get('AWS_MQ_BROKER_PASSWORD')
+AWS_MQ_BROKER_HOST = 'b-04266b8b-b5b7-4270-810c-24057b12085d.mq.us-east-1.amazonaws.com'
+AWS_MQ_BROKER_PORT = '5671'
+AWS_MQ_BROKER_VHOST = '/'
+
+# Replace the existing CELERY_BROKER_URL with this
+CELERY_BROKER_URL = f'amqps://{AWS_MQ_BROKER_USERID}:{AWS_MQ_BROKER_PASSWORD}@{AWS_MQ_BROKER_HOST}:{AWS_MQ_BROKER_PORT}/{AWS_MQ_BROKER_VHOST}'
 
 '''
 Config JWT

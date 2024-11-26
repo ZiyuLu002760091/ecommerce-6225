@@ -1,0 +1,37 @@
+spec:
+  template:
+    spec:
+      volumes:
+      - name: celery-override
+        configMap:
+          name: celery-override
+      containers:
+      - name: micro-ecommerce-backend
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            cp /celery-override/celery.py /usr/src/app/config/celery.py &&
+            python manage.py migrate &&
+            python manage.py runserver 0.0.0.0:8000
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        - name: CELERY_TASK_ALWAYS_EAGER
+          value: "True"
+        - name: POSTGRES_DB
+          value: "database"
+        - name: POSTGRES_USER
+          value: "root"
+        - name: POSTGRES_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: POSTGRES_HOST
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: POSTGRES_PASSWORD
+        volumeMounts:
+        - name: celery-override
+          mountPath: /celery-override

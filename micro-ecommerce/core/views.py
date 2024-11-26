@@ -189,14 +189,40 @@ def check_database():
 
 def check_rabbitmq():
     try:
+        if not all([
+            settings.AWS_MQ_BROKER_USERID,
+            settings.AWS_MQ_BROKER_PASSWORD,
+            settings.AWS_MQ_BROKER_HOST,
+            settings.AWS_MQ_BROKER_PORT
+        ]):
+            return {
+                "status": "error",
+                "message": "Missing AWS MQ configuration"
+            }
+
         import pika
-        credentials = pika.PlainCredentials('admin', 'admin')
-        connection = pika.BlockingConnection(
-            pika.ConnectionParameters(
-                host='rabbitmq',
-                credentials=credentials
-            )
+        import ssl
+
+        # SSL Context
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+
+        # Connection parameters with SSL
+        credentials = pika.PlainCredentials(
+            settings.AWS_MQ_BROKER_USERID, 
+            settings.AWS_MQ_BROKER_PASSWORD
         )
+        
+        connection_params = pika.ConnectionParameters(
+            host=settings.AWS_MQ_BROKER_HOST,
+            port=int(settings.AWS_MQ_BROKER_PORT),
+            credentials=credentials,
+            ssl_options=pika.SSLOptions(ssl_context),
+            virtual_host=settings.AWS_MQ_BROKER_VHOST
+        )
+        
+        connection = pika.BlockingConnection(connection_params)
         connection.close()
         return {"status": "ok"}
     except Exception as e:
